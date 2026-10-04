@@ -1,1 +1,210 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>vClock</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bar:#3a3a3a;--side:#444;--side2:#e6e6e6;--bg:#000;--card:#111;--tx:#fff;--lcd:#ff9800;--line:#333}
+:root[data-theme="light"]{--bg:#f4f4f4;--card:#fff;--tx:#111;--line:#ddd}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Segoe UI",system-ui,Arial,sans-serif;min-height:100vh}
+header{height:64px;background:var(--bar);display:flex;align-items:center;justify-content:space-between;padding:0 24px;color:#fff;position:relative}
+.logo{font-size:38px;font-weight:300;letter-spacing:1px}
+.nav{display:flex;align-items:center;gap:22px}
+.nav button,.nav a{background:none;border:0;color:#fff;font-size:16px;cursor:pointer;padding:6px}
+.dd{position:relative}.dd .menu{display:none;position:absolute;right:0;top:34px;background:#fff;color:#111;border-radius:4px;min-width:150px;z-index:20;overflow:hidden}
+.dd.open .menu{display:block}.menu div{padding:10px 14px;cursor:pointer}.menu div:hover{background:#eee}
+.wrap{display:flex;min-height:calc(100vh - 64px)}
+aside{width:125px;background:var(--side);flex:none}
+aside button{width:100%;height:112px;background:none;border:0;border-bottom:1px solid #333;color:#fff;cursor:pointer;font-size:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+aside button.on{background:var(--side2);color:#222}
+aside svg{width:36px;height:36px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+main{flex:1;padding:20px 40px;min-width:0}
+.tools{display:flex;justify-content:flex-end;gap:10px;height:30px}
+.tools button{background:none;border:0;color:var(--tx);cursor:pointer;padding:0}.tools svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6}
+.panel{display:none;text-align:center}.panel.on{display:block}
+.lcd{color:var(--lcd);display:flex;justify-content:center;align-items:flex-end;margin:70px 0 24px;gap:calc(var(--z,1)*6px);flex-wrap:nowrap}
+.lcd svg{height:calc(var(--z,1)*min(13vw,120px));width:auto;transform:skewX(-4deg)}
+.lcd svg.sm{height:calc(var(--z,1)*min(4vw,36px))}
+.seg{fill:currentColor;opacity:.07}.on1{opacity:1}
+.date{font-family:Orbitron,monospace;color:var(--lcd);font-size:calc(var(--z,1)*min(3.2vw,30px));letter-spacing:2px;margin-bottom:34px}
+.btn{background:#3aa76d;color:#fff;border:0;padding:15px 20px;font-size:15px;cursor:pointer;border-radius:2px;margin:4px}
+.btn.red{background:#d9534f}.btn.gray{background:#666}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:50px;text-align:left}
+.card{background:var(--card);padding:18px 24px;border-radius:2px;min-height:130px}
+.card h3{margin:0 0 12px;font-weight:400;font-size:24px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+input,select{background:var(--bg);color:var(--tx);border:1px solid #666;padding:9px;border-radius:3px;font-size:16px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);gap:10px}
+.row button{background:none;border:0;color:#e55;cursor:pointer;font-size:18px}
+.world{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-top:40px}
+.world .card{text-align:center;min-height:0}.world b{font-size:26px;color:var(--lcd);font-family:Orbitron,monospace}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:50}
+.modal.show{display:flex}.box{background:var(--card);color:var(--tx);padding:26px;border-radius:6px;min-width:290px;max-width:92vw;text-align:left}
+.box h2{margin-top:0}.ring{animation:bl .6s infinite alternate}@keyframes bl{to{opacity:.3}}
+@media(max-width:760px){.wrap{flex-direction:column-reverse}aside{width:100%;display:flex}aside button{height:72px;font-size:12px;border-bottom:0}aside svg{width:26px;height:26px}main{padding:14px}.cards{grid-template-columns:1fr}.lcd{margin-top:36px}.nav{gap:8px}.logo{font-size:30px}header{padding:0 12px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">vClock</div>
+  <div class="nav">
+    <button onclick="openHol()">Holidays</button>
+    <div class="dd" id="dd"><button onclick="dd.classList.toggle('open')">Tools ⌵</button>
+      <div class="menu"><div onclick="go('timer')">Timer</div><div onclick="go('stopwatch')">Stopwatch</div><div onclick="go('time')">World Time</div></div></div>
+    <button title="Theme" onclick="toggleTheme()" style="font-size:26px">◐</button>
+    <button title="Settings" onclick="openSet()" style="font-size:26px">⚙</button>
+  </div>
+</header>
+<div class="wrap">
+<aside id="side"></aside>
+<main>
+  <div class="tools">
+    <button title="Share" onclick="share()"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8 11l8-4M8 13l8 4"/></svg></button>
+    <button title="Zoom out" onclick="zoom(-.15)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 12h10"/></svg></button>
+    <button title="Zoom in" onclick="zoom(.15)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 12h10M12 7v10"/></svg></button>
+    <button title="Fullscreen" onclick="fs()"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
 
+  <section class="panel on" id="p-alarm">
+    <div class="lcd" id="l-alarm"></div><div class="date" id="d-alarm"></div>
+    <button class="btn" onclick="openAlarm()">Set Alarm</button>
+    <div class="cards">
+      <div class="card"><h3>Set the alarm for the specified time</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><input type="time" id="at"><input id="al" placeholder="Label (ixtiyoriy)"><button class="btn" style="margin:0;padding:10px 16px" onclick="addAlarm()">Add</button></div></div>
+      <div class="card"><h3>Alarms</h3><div id="alist"><span style="opacity:.6">Hozircha alarm yo'q</span></div></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-timer">
+    <div class="lcd" id="l-timer"></div>
+    <div style="margin-bottom:14px"><input type="number" id="th" min="0" value="0" style="width:70px"> h
+      <input type="number" id="tm" min="0" value="5" style="width:70px"> m
+      <input type="number" id="ts" min="0" value="0" style="width:70px"> s</div>
+    <div><button class="btn" id="tb" onclick="timerToggle()">Start</button><button class="btn gray" onclick="timerReset()">Reset</button></div>
+    <div style="margin-top:10px"><button class="btn gray" onclick="preset(60)">1 min</button><button class="btn gray" onclick="preset(300)">5 min</button><button class="btn gray" onclick="preset(600)">10 min</button><button class="btn gray" onclick="preset(1800)">30 min</button></div>
+  </section>
+
+  <section class="panel" id="p-stopwatch">
+    <div class="lcd" id="l-stopwatch"></div>
+    <div><button class="btn" id="sb" onclick="swToggle()">Start</button><button class="btn gray" onclick="swLap()">Lap</button><button class="btn gray" onclick="swReset()">Reset</button></div>
+    <div class="card" style="max-width:520px;margin:30px auto 0"><h3>Laps</h3><div id="laps"></div></div>
+  </section>
+
+  <section class="panel" id="p-time">
+    <div class="lcd" id="l-time"></div><div class="date" id="d-time"></div>
+    <div class="world" id="world"></div>
+  </section>
+</main>
+</div>
+
+<div class="modal" id="m-ring"><div class="box" style="text-align:center"><h2 class="ring">⏰ <span id="ringtxt"></span></h2><button class="btn red" onclick="stopRing()">Stop</button></div></div>
+<div class="modal" id="m-hol" onclick="if(event.target===this)this.classList.remove('show')"><div class="box"><h2>Holidays (O'zbekiston)</h2><div id="hol"></div></div></div>
+<div class="modal" id="m-set" onclick="if(event.target===this)this.classList.remove('show')"><div class="box"><h2>Settings</h2>
+  <p>Format: <select id="sf" onchange="S.h12=this.value==='12';save()"><option value="12">12 soat (AM/PM)</option><option value="24">24 soat</option></select></p>
+  <p>Rang: <select id="sc" onchange="S.color=this.value;save()"><option value="#ff9800">Orange</option><option value="#00e676">Green</option><option value="#ff1744">Red</option><option value="#29b6f6">Blue</option><option value="#ffffff">White</option></select></p>
+  <button class="btn gray" onclick="m_set.classList.remove('show')">Close</button></div></div>
+
+<script>
+const $=id=>document.getElementById(id);const m_set=$('m-set'),dd=$('dd');
+const pad=n=>String(n).padStart(2,'0');
+let S={h12:true,color:'#ff9800',zoom:1,theme:'dark'};
+try{Object.assign(S,JSON.parse(localStorage.getItem('vclock')||'{}'))}catch(e){}
+function save(){try{localStorage.setItem('vclock',JSON.stringify({...S}))}catch(e){}apply()}
+function apply(){const r=document.documentElement;r.style.setProperty('--lcd',S.color);r.style.setProperty('--z',S.zoom);r.dataset.theme=S.theme;$('sf').value=S.h12?'12':'24';$('sc').value=S.color}
+function toggleTheme(){S.theme=S.theme==='dark'?'light':'dark';save()}
+function zoom(d){S.zoom=Math.max(.4,Math.min(1.6,S.zoom+d));save()}
+function fs(){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{})}
+function share(){const u=location.href;(navigator.share?navigator.share({title:'vClock',url:u}):navigator.clipboard.writeText(u).then(()=>alert('Havola nusxalandi'))).catch(()=>{})}
+function openSet(){m_set.classList.add('show')}
+
+/* 7-segment renderer */
+const P={a:"9,4 51,4 45,11 15,11",b:"53,6 53,46 47,49 46,13",c:"53,54 53,94 47,87 46,51",d:"9,96 51,96 45,89 15,89",e:"7,54 7,94 13,87 14,51",f:"7,6 7,46 13,49 14,13",g:"10,50 16,46 44,46 50,50 44,54 16,54"};
+const M={0:'abcdef',1:'bc',2:'abged',3:'abgcd',4:'fgbc',5:'afgcd',6:'afgedc',7:'abc',8:'abcdefg',9:'abcfgd'};
+function ch(c){
+  if(c===':')return '<svg viewBox="0 0 20 100" style="width:calc(var(--z,1)*min(2.6vw,24px))"><rect x="5" y="28" width="10" height="10" fill="currentColor"/><rect x="5" y="64" width="10" height="10" fill="currentColor"/></svg>';
+  if(c==='.')return '<svg viewBox="0 0 20 100" style="width:calc(var(--z,1)*min(2.6vw,24px))"><rect x="5" y="86" width="10" height="10" fill="currentColor"/></svg>';
+  if(c===' ')return '<svg viewBox="0 0 60 100"></svg>';
+  const on=M[c]||'';
+  return '<svg viewBox="0 0 60 100">'+Object.keys(P).map(k=>`<polygon class="seg${on.includes(k)?' on1':''}" points="${P[k]}"/>`).join('')+'</svg>';
+}
+const cache={};
+function lcd(id,str,sfx){const key=str+'|'+sfx;if(cache[id]===key)return;cache[id]=key;
+  $(id).innerHTML=[...str].map(ch).join('')+(sfx?`<span style="font-family:Orbitron,monospace;font-size:calc(var(--z,1)*min(4vw,36px));margin-left:12px;line-height:1.2;text-transform:uppercase">${sfx}</span>`:'')}
+
+/* Navigation */
+const ICONS={alarm:'<circle cx="18" cy="20" r="11"/><path d="M18 14v6l4 2M6 8l5-4M30 8l-5-4"/>',timer:'<circle cx="18" cy="20" r="12"/><path d="M18 20l-4-5M14 5h8"/>',stopwatch:'<circle cx="18" cy="21" r="11"/><path d="M18 21v-7M14 6h8M18 6v4"/>',time:'<circle cx="18" cy="18" r="13"/><path d="M18 10v8h-5"/>'};
+const NAMES={alarm:'Alarm Clock',timer:'Timer',stopwatch:'Stopwatch',time:'Time'};
+let tab='alarm';
+$('side').innerHTML=Object.keys(NAMES).map(k=>`<button data-t="${k}" onclick="go('${k}')"><svg viewBox="0 0 36 40">${ICONS[k]}</svg>${NAMES[k]}</button>`).join('');
+function go(t){tab=t;dd.classList.remove('open');document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+t));
+  document.querySelectorAll('#side button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));for(const k in cache)delete cache[k]}
+document.addEventListener('click',e=>{if(!dd.contains(e.target))dd.classList.remove('open')});
+
+/* Audio */
+let ac,ringT;
+function beep(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=880;g.gain.value=.15;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.25)}catch(e){}}
+document.addEventListener('click',()=>{try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}},{once:true});
+function ring(txt){$('ringtxt').textContent=txt;$('m-ring').classList.add('show');clearInterval(ringT);beep();ringT=setInterval(beep,600)}
+function stopRing(){clearInterval(ringT);$('m-ring').classList.remove('show')}
+
+/* Clock */
+const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmt(d,tz){let o=d;if(tz){const p=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(d);const g=t=>+p.find(x=>x.type===t).value;o={h:g('hour'),m:g('minute'),s:g('second')}}else o={h:d.getHours(),m:d.getMinutes(),s:d.getSeconds()};
+  let h=o.h,ap='';if(S.h12){ap=h>=12?'pm':'am';h=h%12||12}else h=pad(h);return{str:`${h}:${pad(o.m)}:${pad(o.s)}`,ap}}
+function dateStr(d){return `${D[d.getDay()]} - ${MO[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`.toUpperCase()}
+
+/* Alarms */
+let alarms=[],fired='';
+try{alarms=JSON.parse(localStorage.getItem('vclock_al')||'[]')}catch(e){}
+function saveAl(){try{localStorage.setItem('vclock_al',JSON.stringify(alarms))}catch(e){}renderAl()}
+function openAlarm(){const d=new Date(Date.now()+60000);$('at').value=pad(d.getHours())+':'+pad(d.getMinutes());$('at').focus();$('at').scrollIntoView({behavior:'smooth',block:'center'})}
+function addAlarm(){const t=$('at').value;if(!t)return;alarms.push({t,l:$('al').value.trim(),id:Date.now()});$('al').value='';saveAl()}
+function delAl(id){alarms=alarms.filter(a=>a.id!==id);saveAl()}
+function renderAl(){$('alist').innerHTML=alarms.length?alarms.sort((a,b)=>a.t.localeCompare(b.t)).map(a=>`<div class="row"><span><b style="font-size:20px">${a.t}</b> ${a.l?'— '+a.l.replace(/</g,'&lt;'):''}</span><button onclick="delAl(${a.id})">✕</button></div>`).join(''):'<span style="opacity:.6">Hozircha alarm yo\'q</span>'}
+
+/* Timer */
+let T={left:0,run:false,end:0,init:false};
+function timerSet(){return (+$('th').value||0)*3600+(+$('tm').value||0)*60+(+$('ts').value||0)}
+function timerToggle(){if(T.run){T.left=Math.max(0,T.end-Date.now())/1000;T.run=false;$('tb').textContent='Resume';return}
+  if(!T.init||T.left<=0){T.left=timerSet();T.init=true}if(T.left<=0)return;T.end=Date.now()+T.left*1000;T.run=true;$('tb').textContent='Pause'}
+function timerReset(){T={left:0,run:false,end:0,init:false};$('tb').textContent='Start'}
+function preset(s){timerReset();$('th').value=Math.floor(s/3600);$('tm').value=Math.floor(s%3600/60);$('ts').value=s%60}
+function tdisp(sec){sec=Math.ceil(sec);return `${pad(Math.floor(sec/3600))}:${pad(Math.floor(sec%3600/60))}:${pad(sec%60)}`}
+
+/* Stopwatch */
+let W={run:false,start:0,acc:0,laps:[]};
+const wel=()=>W.acc+(W.run?Date.now()-W.start:0);
+function swToggle(){if(W.run){W.acc=wel();W.run=false;$('sb').textContent='Resume'}else{W.start=Date.now();W.run=true;$('sb').textContent='Stop'}}
+function swReset(){W={run:false,start:0,acc:0,laps:[]};$('sb').textContent='Start';$('laps').innerHTML=''}
+function swfmt(ms){const c=Math.floor(ms/10)%100,s=Math.floor(ms/1000)%60,m=Math.floor(ms/60000)%60,h=Math.floor(ms/3600000);return `${pad(h)}:${pad(m)}:${pad(s)}.${pad(c)}`}
+function swLap(){if(!W.run&&!W.acc)return;W.laps.unshift(wel());$('laps').innerHTML=W.laps.map((l,i)=>`<div class="row"><span>Lap ${W.laps.length-i}</span><b>${swfmt(l)}</b></div>`).join('')}
+
+/* World time */
+const Z=[['Tashkent','Asia/Tashkent'],['London','Europe/London'],['New York','America/New_York'],['Tokyo','Asia/Tokyo'],['Dubai','Asia/Dubai'],['Moscow','Europe/Moscow'],['Istanbul','Europe/Istanbul'],['Sydney','Australia/Sydney']];
+$('world').innerHTML=Z.map((z,i)=>`<div class="card"><div style="opacity:.7">${z[0]}</div><b id="w${i}"></b></div>`).join('');
+
+/* Holidays */
+const H=[[0,1,"Yangi yil"],[2,8,"Xalqaro xotin-qizlar kuni"],[2,21,"Navro'z"],[4,9,"Xotira va qadrlash kuni"],[8,1,"Mustaqillik kuni"],[9,1,"O'qituvchilar va murabbiylar kuni"],[11,8,"Konstitutsiya kuni"]];
+function openHol(){const n=new Date(),t0=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+  $('hol').innerHTML=H.map(h=>{let d=new Date(n.getFullYear(),h[0],h[1]);if(d<t0)d=new Date(n.getFullYear()+1,h[0],h[1]);return{d,n:h[2]}}).sort((a,b)=>a.d-b.d)
+  .map(x=>`<div class="row"><span>${x.n}<br><small style="opacity:.6">${MO[x.d.getMonth()]} ${x.d.getDate()}, ${x.d.getFullYear()}</small></span><b>${Math.round((x.d-t0)/864e5)} kun</b></div>`).join('');$('m-hol').classList.add('show')}
+
+/* Main loop */
+function tick(){
+  const now=new Date(),f=fmt(now),ds=dateStr(now);
+  if(tab==='alarm'||tab==='time'){lcd('l-'+tab,f.str,f.ap);$('d-'+tab).textContent=ds}
+  if(tab==='time')Z.forEach((z,i)=>{const r=fmt(now,z[1]);$('w'+i).textContent=r.str+(r.ap?' '+r.ap.toUpperCase():'')});
+  const key=pad(now.getHours())+':'+pad(now.getMinutes());
+  if(now.getSeconds()<2&&fired!==key+now.getDate()){const a=alarms.find(x=>x.t===key);if(a){fired=key+now.getDate();ring(a.l||'Alarm '+a.t)}}
+  if(T.run){const l=(T.end-Date.now())/1000;if(l<=0){T.run=false;T.left=0;T.init=false;$('tb').textContent='Start';lcd('l-timer','00:00:00','');ring('Timer tugadi!')}else lcd('l-timer',tdisp(l),'')}
+  else if(tab==='timer'){lcd('l-timer',tdisp(T.init?T.left:timerSet()),'')}
+  if(tab==='stopwatch')lcd('l-stopwatch',swfmt(wel()),'');
+}
+apply();renderAl();go('alarm');setInterval(tick,50);tick();
+</script>
+</body>
+</html>
